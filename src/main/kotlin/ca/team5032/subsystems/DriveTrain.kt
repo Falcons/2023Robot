@@ -17,7 +17,6 @@ import edu.wpi.first.wpilibj.drive.DifferentialDrive
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup
 import kotlin.math.abs
 
-
 class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
     companion object {
         val DEADBAND_THRESHOLD = DoubleProperty("Deadband Threshold", 0.05)
@@ -45,6 +44,7 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
     private val rightRear = WPI_TalonFX(4)
 
     private val TofF = TimeOfFlight(6)
+    val gyro = PigeonIMU(7)
 
 
     private val m_left = MotorControllerGroup(leftFront, leftRear)
@@ -55,7 +55,6 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
     private val kMaxSpeed = 3.0
     private val k_trackWidth = 1.0
     private val kIncoderResolution = 2048
-    val gyro = PigeonIMU(7)
 
     private val m_leftPIDController = PIDController(1.0,0.0,0.0)
     private val m_rightPIDController = PIDController(1.0,0.0,0.0)
