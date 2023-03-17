@@ -136,11 +136,11 @@ object Romance : TimedRobot() {
 
     /** This autonomous runs the autonomous command selected by your [RobotContainer] class.  */
     override fun autonomousInit() {
-        autonomousCommand = robotContainer?.autonomousCommand
+        //autonomousCommand = robotContainer?.autonomousCommand
 
         // Schedule the autonomous command (example)
         // Note the Kotlin safe-call(?.), this ensures autonomousCommand is not null before scheduling it
-        autonomousCommand?.schedule()
+        //autonomousCommand?.schedule()
     }
 
     /** This function is called periodically during autonomous.  */
@@ -153,7 +153,7 @@ object Romance : TimedRobot() {
         // continue until interrupted by another command, remove
         // this line or comment it out.
         // Note the Kotlin safe-call(?.), this ensures autonomousCommand is not null before cancelling it
-        autonomousCommand?.cancel()
+        //autonomousCommand?.cancel()
     }
 
     /** This function is called periodically during operator control.  */

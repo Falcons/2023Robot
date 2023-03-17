@@ -43,9 +43,9 @@ class RobotContainer {
      *
      * @return the command to run in autonomous
      */
-    val autonomousCommand: Command
-        get() {
-            // An example command will be run in autonomous
-            //return Autos.exampleAuto(exampleSubsystem)
-        }
+//    val autonomousCommand: Command
+//        get() {
+//            // An example command will be run in autonomous
+//            //return Autos.exampleAuto(exampleSubsystem)
+//        }
 }
