@@ -9,8 +9,21 @@ package ca.team5032
  * It is advised to statically import this class (or one of its inner classes) wherever the
  * constants are needed, to reduce verbosity.
  */
-class Constants {
-    object OperatorConstants {
-        const val kDriverControllerPort = 0
-    }
-}
+const val LEFT_FRONT_ID = 3
+const val LEFT_REAR_ID = 4
+const val RIGHT_FRONT_ID = 1
+const val RIGHT_REAR_ID = 2
+
+const val TIME_OF_FLIGHT_ID = 6
+const val GYRO_ID = 5
+
+const val INTAKE_MOTOR_ID = 7
+const val GRAB_MOTOR_ID = 8
+const val OBJECT_SENSOR_ID = 1
+
+const val BOOM_ONE_ID = 11
+const val BOOM_TWO_ID = 12
+
+const val WRIST_MOTOR_ID = 10
+const val PIVOT_MOTOR = 9
+

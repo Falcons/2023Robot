@@ -1,14 +1,18 @@
 package ca.team5032
 
-import ca.team5032.subsystems.DriveTrain
-import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX
+//import ca.team5032.commands.RotateArm
+import ca.team5032.commands.ArmPositions.HighPostCone
+import ca.team5032.commands.ArmPositions.LowIntakeCone
+import ca.team5032.commands.ArmPositions.MidPostCone
+import ca.team5032.commands.ArmPositions.StowArm
+import ca.team5032.commands.*
+import ca.team5032.subsystems.*
 import edu.wpi.first.wpilibj.TimedRobot
 import edu.wpi.first.wpilibj.XboxController
-import edu.wpi.first.wpilibj.drive.DifferentialDrive
-import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup
 import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.CommandScheduler
-
+import edu.wpi.first.wpilibj2.command.button.JoystickButton
+import edu.wpi.first.wpilibj2.command.button.POVButton
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
  * each mode, as described in the TimedRobot documentation. If you change the name of this class or
@@ -29,20 +33,83 @@ object Romance : TimedRobot() {
     val driveController = XboxController(0)
     val peripheralController = XboxController(1)
 
+    //val claw = Claw()
+    val pivot = Pivot()
+//    val wrist = Wrist()
+    val selectItem = SelectItem()
+    val clawC = ClawC()
+//    val boomTwo = BoomTwoC()
+//    val boomOne = BoomOneC()
+    val arm = Arm()
+    val drive = DriveTrain()
     private var autonomousCommand: Command? = null
     private var robotContainer: RobotContainer? = null
 
-    val drive = DriveTrain()
     /**
      * This function is run when the robot is first started up and should be used for any
      * initialization code.
      */
+
+
+    private fun registerCommands() {
+//        JoystickButton(driveController, XboxController.Button.kX.value)
+//            .onTrue(claw::intake, claw).onFalse(claw::stopIntake, claw)
+//        JoystickButton(driveController, XboxController.Button.kB.value)
+//            .onTrue(claw::intake, claw).onFalse(claw::stopIntake, claw)
+
+//        JoystickButton(peripheralController,XboxController.Button.kX.value)
+//            .whenPressed(claw::intake, claw).whenReleased(claw::stopIntake, claw)
+
+//        JoystickButton(peripheralController,XboxController.Button.kB.value)
+//            .whenPressed(claw::eject, claw).whenReleased(claw::stopIntake, claw)
+//
+//        JoystickButton(peripheralController,XboxController.Button.kY.value)
+//            .whenPressed(claw::grab, claw).whenReleased(claw::stopGrab, claw)
+//
+//        JoystickButton(peripheralController,XboxController.Button.kA.value)
+//            .whenPressed(claw::release, claw).whenReleased(claw::stopGrab, claw)
+
+
+
+//        POVButton(peripheralController, 0).whenPressed(claw::zeroGrab, claw)
+//        POVButton(peripheralController, 180).whenPressed(claw::cancelGrab, claw)
+
+        //POVButton(peripheralController, 90).whenPressed(arm::zeroEncoder, arm)
+
+//        POVButton(peripheralController, 270).whenPressed(claw::compressGrab, claw).whenReleased(claw::stopGrab, claw)
+//        POVButton(peripheralController, 0).whenPressed({HighPostCone().schedule()}, arm).whenReleased({HighPostCone().cancel()}, arm)
+//        POVButton(peripheralController, 90).whenPressed({MidPostCone().schedule()}, arm).whenReleased({MidPostCone().cancel()}, arm)
+//        POVButton(peripheralController, 180).whenPressed({LowIntakeCone().schedule()}, arm).whenReleased({LowIntakeCone().cancel()}, arm)
+//        POVButton(peripheralController, 270).whenPressed({StowArm().schedule()}, arm).whenReleased({ cancelCommands() }, arm)
+
+//        POVButton(peripheralController, 0).whenPressed({HighPostCone().schedule()}, arm)
+//        POVButton(peripheralController, 90).whenPressed({MidPostCone().schedule()}, arm)
+//        POVButton(peripheralController, 180).whenPressed({LowIntakeCone().schedule()}, arm)
+//        POVButton(peripheralController, 270).whenPressed({StowArm().schedule()}, arm)
+
+        POVButton(peripheralController, 0).whenPressed(arm::highPost, arm)
+        POVButton(peripheralController, 90).whenPressed(arm::midPost, arm)
+        POVButton(peripheralController, 180).whenPressed(arm::lowIntake, arm)
+        POVButton(peripheralController, 270).whenPressed(arm::stow, arm)
+
+        JoystickButton(peripheralController,XboxController.Button.kX.value)
+            .whenPressed({ClawIntakeCommand().schedule()}, clawC)
+
+//        JoystickButton(peripheralController,XboxController.Button.kB.value)
+//            .whenPressed({CompressCommand(-10000.0).schedule()}, clawC)
+
+        JoystickButton(peripheralController,XboxController.Button.kRightBumper.value)
+            .whenPressed(arm::cancelCommand, arm)
+
+        JoystickButton(driveController,XboxController.Button.kB.value)
+            .whenPressed({HomeCommand().schedule()}, arm)
+    }
+
     override fun robotInit() {
         // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
         // autonomous chooser on the dashboard.
         robotContainer = RobotContainer()
-//        rightFront.setInverted(true)
-//        rightRear.setInverted(true)
+        registerCommands()
     }
 
     /**

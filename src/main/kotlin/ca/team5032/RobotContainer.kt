@@ -2,10 +2,6 @@ package ca.team5032
 
 import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController
-import edu.wpi.first.wpilibj2.command.button.Trigger
-import ca.team5032.commands.Autos
-import ca.team5032.commands.ExampleCommand
-import ca.team5032.subsystems.Example
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -15,10 +11,10 @@ import ca.team5032.subsystems.Example
  */
 class RobotContainer {
     // The robot's subsystems and commands are defined here...
-    private val exampleSubsystem = Example()
+    //private val exampleSubsystem = Example()
 
     // Replace with CommandPS4Controller or CommandJoystick if needed
-    private val driverController = CommandXboxController(Constants.OperatorConstants.kDriverControllerPort)
+    //private val driverController = CommandXboxController(Constants.OperatorConstants.kDriverControllerPort)
 
     /** The container for the robot. Contains subsystems, OI devices, and commands.  */
     init {
@@ -35,11 +31,11 @@ class RobotContainer {
      */
     private fun configureBindings() {
         // Schedule ExampleCommand when exampleCondition changes to true
-        Trigger { exampleSubsystem.exampleCondition() }.onTrue(ExampleCommand(exampleSubsystem))
+        //Trigger { exampleSubsystem.exampleCondition() }.onTrue(ExampleCommand(exampleSubsystem))
 
         // Schedule exampleMethodCommand when the Xbox controller's B button is pressed,
         // cancelling on release.
-        driverController.b().whileTrue(exampleSubsystem.exampleMethodCommand())
+        //driverController.b().whileTrue(exampleSubsystem.exampleMethodCommand())
     }
 
     /**
@@ -50,6 +46,6 @@ class RobotContainer {
     val autonomousCommand: Command
         get() {
             // An example command will be run in autonomous
-            return Autos.exampleAuto(exampleSubsystem)
+            //return Autos.exampleAuto(exampleSubsystem)
         }
 }

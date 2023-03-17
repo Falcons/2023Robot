@@ -1,6 +1,6 @@
 package ca.team5032.subsystems
 
-import ca.team5032.Romance
+import ca.team5032.*
 import ca.team5032.utils.DoubleProperty
 import ca.team5032.utils.Subsystem
 import ca.team5032.utils.Tabbed
@@ -20,7 +20,7 @@ import kotlin.math.abs
 class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
     companion object {
         val DEADBAND_THRESHOLD = DoubleProperty("Deadband Threshold", 0.05)
-        val PIVOT_SENSE = DoubleProperty("Rotation sensitivity", 0.6)
+        val PIVOT_SENSE = DoubleProperty("Rotation sensitivity", 0.4)
         val X_SENSE = DoubleProperty("X speed sensitivity",0.7)
         val Y_SENSE = DoubleProperty("Y Speed Sensitivity", 0.7)
         val MICRO_SPEED = DoubleProperty("Magnitude of Micro speed", 0.6)
@@ -38,13 +38,13 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
         object Idle : State()
     }
 
-    private val leftFront = WPI_TalonFX(1)
-    private val leftRear = WPI_TalonFX(2)
-    private val rightFront = WPI_TalonFX(3)
-    private val rightRear = WPI_TalonFX(4)
+    private val leftFront = WPI_TalonFX(LEFT_FRONT_ID)
+    private val leftRear = WPI_TalonFX(LEFT_REAR_ID)
+    private val rightFront = WPI_TalonFX(RIGHT_FRONT_ID)
+    private val rightRear = WPI_TalonFX(RIGHT_REAR_ID)
 
-    private val TofF = TimeOfFlight(6)
-    val gyro = PigeonIMU(7)
+    private val TofF = TimeOfFlight(TIME_OF_FLIGHT_ID)
+    val gyro = PigeonIMU(GYRO_ID)
 
 
     private val m_left = MotorControllerGroup(leftFront, leftRear)
@@ -65,6 +65,9 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
 
     private val hasYInput: Boolean
         get() = abs(controller.leftY) > DEADBAND_THRESHOLD.value
+
+    private val hasYMovement: Boolean
+        get() = leftFront.selectedSensorVelocity > 0.1
 
     private val hasXInput: Boolean
         get() = abs(controller.rightX) > DEADBAND_THRESHOLD.value
@@ -105,7 +108,7 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
             )
             is State.OverrideDrive -> DriveInput(
                 -controller.leftY * Y_SENSE.value,
-                -controller.rightX * X_SENSE.value ,
+                -controller.rightX * PIVOT_SENSE.value ,
                 pivot = pivotOverride,
                 brakes = !brakeOverride
             )
@@ -202,5 +205,9 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
 //    fun getHeading(): Double {
 //        return
 //    }
+
+    fun balanceOnSwitch() {
+        // dharav part :)
+    }
 
 }

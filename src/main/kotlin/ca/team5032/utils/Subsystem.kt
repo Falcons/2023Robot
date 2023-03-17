@@ -1,5 +1,7 @@
 package ca.team5032.utils
 
+import edu.wpi.first.wpilibj2.command.PIDSubsystem
+import edu.wpi.first.wpilibj2.command.Subsystem
 import edu.wpi.first.wpilibj2.command.SubsystemBase
 import java.util.logging.Logger
 
