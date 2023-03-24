@@ -9,11 +9,12 @@ class ClawIntakeCommand() : CommandBase() {
     // item -1 for cube
     private var setPointTicks = 0.0
     private var TickThreshold = 0.8 / Romance.period
+    private var hasObjectFlag = false
 
     /** Called when the command is initially scheduled.  */
     override fun initialize() {
-        Romance.arm.mCancelCommand = false
-        Romance.clawC.hasObject = false
+        Romance.clawC.mCancelIntake = false
+
         //Romance.clawC.changeState(ClawC.State.Intaking)
         setPointTicks = 0.0
     }
@@ -36,19 +37,32 @@ class ClawIntakeCommand() : CommandBase() {
 
     /** Called once the command ends or is interrupted.  */
     override fun end(interrupted: Boolean) {
-        Romance.arm.mCancelCommand = false
+        Romance.clawC.mCancelIntake = false
+//        Romance.clawC.intakeMotor.set(0.0)
+//        Romance.clawC.grabMotor.set(-0.1)
         Romance.clawC.intakeMotor.set(0.0)
-        Romance.clawC.grabMotor.set(-0.1)
+        if (Romance.clawC.showSensor() == 1.0 || hasObjectFlag) {
+            if (Romance.selectItem.state is SelectItem.State.Cube) {
+                //compress cube
+                Romance.clawC.grabMotor.set(-0.2658)
+            } else {
+                // compress cone
+                Romance.clawC.grabMotor.set(-0.4)
+            }
+        }
         Romance.clawC.changeState(ClawC.State.Idle)
     }
 
     /** Returns true when the command should end.  */
     override fun isFinished(): Boolean {
-        if (Romance.arm.mCancelCommand) {return true}
+        if (Romance.clawC.mCancelIntake) {return true}
+        if (Romance.clawC.showSensor() == 1.0) { return true}
         if (setPointTicks >= TickThreshold) {
-            Romance.clawC.hasObject = true
+            hasObjectFlag = true
             return true
         }
-        return false
+        else {
+            return false
+        }
     }
 }

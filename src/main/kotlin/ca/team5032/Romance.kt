@@ -1,24 +1,28 @@
 package ca.team5032
 
 //import ca.team5032.commands.RotateArm
-import ca.team5032.commands.ArmPositions.HighPostCone
-import ca.team5032.commands.ArmPositions.LowIntakeCone
-import ca.team5032.commands.ArmPositions.MidPostCone
-import ca.team5032.commands.ArmPositions.StowArm
 import ca.team5032.commands.*
+import ca.team5032.commands.AutoCommands.*
 import ca.team5032.subsystems.*
+import edu.wpi.first.net.PortForwarder
 import edu.wpi.first.wpilibj.TimedRobot
 import edu.wpi.first.wpilibj.XboxController
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard
 import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.CommandScheduler
 import edu.wpi.first.wpilibj2.command.button.JoystickButton
 import edu.wpi.first.wpilibj2.command.button.POVButton
+import javax.sound.sampled.Port
+
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
  * each mode, as described in the TimedRobot documentation. If you change the name of this class or
  * the package after creating this project, you must also update the build.gradle file in the
  * project.
  */
+
+// 5980 Mr Wilson Admin Password
 object Romance : TimedRobot() {
 
 //    private val leftFront = WPI_TalonFX(1)
@@ -32,10 +36,14 @@ object Romance : TimedRobot() {
 
     val driveController = XboxController(0)
     val peripheralController = XboxController(1)
+    //private var autoCommand: Command? = null
+    private val autoChooser = SendableChooser<Command>()
+    private lateinit var autoCommand: Command
 
     //val claw = Claw()
-    val pivot = Pivot()
+//    val pivot = Pivot()
 //    val wrist = Wrist()
+    val limelight = Limelight()
     val selectItem = SelectItem()
     val clawC = ClawC()
 //    val boomTwo = BoomTwoC()
@@ -44,6 +52,11 @@ object Romance : TimedRobot() {
     val drive = DriveTrain()
     private var autonomousCommand: Command? = null
     private var robotContainer: RobotContainer? = null
+
+    private fun cancelCommands() {
+        arm.cancelCommand()
+        clawC.cancelIntake()
+    }
 
     /**
      * This function is run when the robot is first started up and should be used for any
@@ -93,23 +106,63 @@ object Romance : TimedRobot() {
         POVButton(peripheralController, 270).whenPressed(arm::stow, arm)
 
         JoystickButton(peripheralController,XboxController.Button.kX.value)
-            .whenPressed({ClawIntakeCommand().schedule()}, clawC)
+            .whenPressed(clawC::intake, clawC)
 
-//        JoystickButton(peripheralController,XboxController.Button.kB.value)
-//            .whenPressed({CompressCommand(-10000.0).schedule()}, clawC)
+        JoystickButton(peripheralController,XboxController.Button.kB.value)
+            .whenPressed(clawC::eject, clawC)
+
+        JoystickButton(peripheralController,XboxController.Button.kY.value)
+            .whenPressed(selectItem::cone, selectItem)
+
+        JoystickButton(peripheralController,XboxController.Button.kA.value)
+            .whenPressed(selectItem::cube, selectItem)
+
+        JoystickButton(peripheralController,XboxController.Button.kLeftStick.value)
+            .whenPressed(arm::fallenIntake, arm)
 
         JoystickButton(peripheralController,XboxController.Button.kRightBumper.value)
-            .whenPressed(arm::cancelCommand, arm)
+            .whenPressed({ cancelCommands() }, arm)
 
-        JoystickButton(driveController,XboxController.Button.kB.value)
-            .whenPressed({HomeCommand().schedule()}, arm)
+        JoystickButton(peripheralController,XboxController.Button.kLeftBumper.value)
+            .whenPressed(arm::homeArm, arm)
+
+//        JoystickButton(driveController,XboxController.Button.kA.value)
+//            .whenPressed({BalanceCommand().schedule()}, drive).whenReleased({BalanceCommand().cancel()}, drive)
+
+//        JoystickButton(driveController,XboxController.Button.kB.value)
+//            .whenPressed({DriveForTimeCommand(1.0).schedule()}, drive).whenReleased({DriveForTimeCommand(1.0).cancel()}, drive)
+
+//        JoystickButton(driveController, XboxController.Button.kA.value)
+//            .whenPressed({DriveForTimeCommand().schedule()}, drive)
+
+//        JoystickButton(driveController,XboxController.Button.kA.value)
+//            .whenPressed({BalanceStages(-1).schedule()}, drive)
     }
 
     override fun robotInit() {
         // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
         // autonomous chooser on the dashboard.
         robotContainer = RobotContainer()
+
+        // For limelight
+        //for (port in 5800..5805) {
+          //  PortForwarder.add(port, "limelight.local", port)
+        //}
+
         registerCommands()
+
+//        autoChooser.setDefaultOption("3 Ball + 2 Pickup (slow 5?)", FiveBallAutoCommand())
+//        autoChooser.addOption("3 Ball", ThreeBallAutoCommand())
+//        autoChooser.addOption("2 Ball (start of 5 ball path)", TwoBallAltAutoCommand())
+
+        autoChooser.setDefaultOption("Place Cone", ConeBrainDead())
+        autoChooser.addOption("Place Cube", CubeBrainDead())
+        autoChooser.addOption("Place cone and taxi", ConeAndTaxi())
+        autoChooser.addOption("Place cube and taxi", CubeAndTaxi())
+        autoChooser.addOption("Taxi", Taxi())
+
+        SmartDashboard.putData(autoChooser)
+
     }
 
     /**
@@ -132,7 +185,9 @@ object Romance : TimedRobot() {
     override fun disabledInit() {}
 
     /** This function is called periodically when disabled.  */
-    override fun disabledPeriodic() {}
+    override fun disabledPeriodic() {
+        drive.applyBrakes()
+    }
 
     /** This autonomous runs the autonomous command selected by your [RobotContainer] class.  */
     override fun autonomousInit() {
@@ -141,6 +196,8 @@ object Romance : TimedRobot() {
         // Schedule the autonomous command (example)
         // Note the Kotlin safe-call(?.), this ensures autonomousCommand is not null before scheduling it
         //autonomousCommand?.schedule()
+        autoCommand = autoChooser.selected
+        autoCommand.schedule()
     }
 
     /** This function is called periodically during autonomous.  */
@@ -148,6 +205,7 @@ object Romance : TimedRobot() {
 
     /** This function is called once when teleop is enabled.  */
     override fun teleopInit() {
+        drive.disengageBrakes()
         // This makes sure that the autonomous stops running when
         // teleop starts running. If you want the autonomous to
         // continue until interrupted by another command, remove

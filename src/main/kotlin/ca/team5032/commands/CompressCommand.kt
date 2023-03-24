@@ -12,7 +12,7 @@ class CompressCommand(private val position: Double) : CommandBase() {
 
     /** Called when the command is initially scheduled.  */
     override fun initialize() {
-        Romance.arm.mCancelCommand = false
+        Romance.clawC.mCancelIntake = false
         Romance.clawC.grabMotor.configForwardSoftLimitEnable(true)
         Romance.clawC.grabMotor.configReverseSoftLimitEnable(true)
         // determine direction
@@ -40,13 +40,13 @@ class CompressCommand(private val position: Double) : CommandBase() {
 
     /** Called once the command ends or is interrupted.  */
     override fun end(interrupted: Boolean) {
-        Romance.arm.mCancelCommand = false
+        Romance.clawC.mCancelIntake = false
         Romance.clawC.resetGrabLimits()
         Romance.clawC.grabMotor.set(0.0)
     }
     /** Returns true when the command should end.  */
     override fun isFinished(): Boolean {
-        if (Romance.arm.mCancelCommand) {return true}
+        if (Romance.clawC.mCancelIntake) {return true}
         if (Romance.clawC.grabMotor.isFwdLimitSwitchClosed == 1 && direction == 1) {return true}
         return abs(Romance.clawC.grabMotor.selectedSensorPosition - position) <= 1000.0
     }

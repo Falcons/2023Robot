@@ -40,6 +40,7 @@ class WristCommand(private val position: Double) : CommandBase() {
 
     /** Called once the command ends or is interrupted.  */
     override fun end(interrupted: Boolean) {
+        Romance.arm.mCancelCommand = false
         Romance.arm.resetWristLimits()
         if (Romance.arm.wristMotor.isFwdLimitSwitchClosed == 1){Romance.arm.wristMotor.set(0.0)}
         else{Romance.arm.wristMotor.set(0.06)}

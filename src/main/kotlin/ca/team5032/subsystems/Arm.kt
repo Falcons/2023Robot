@@ -1,19 +1,13 @@
 package ca.team5032.subsystems
 import ca.team5032.*
 import ca.team5032.commands.ArmPositions.*
-import ca.team5032.commands.ExtendBoomOneCommand
-import ca.team5032.commands.ExtendBoomTwoCommand
-import ca.team5032.commands.PivotCommand
-import ca.team5032.commands.WristCommand
+import ca.team5032.commands.HomeCommand
 import ca.team5032.utils.DoubleProperty
 import ca.team5032.utils.Subsystem
 import ca.team5032.utils.Tabbed
-import com.ctre.phoenix.motorcontrol.ControlMode
 import com.ctre.phoenix.motorcontrol.NeutralMode
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX
-import edu.wpi.first.wpilibj.DigitalInput
 import edu.wpi.first.wpilibj.XboxController
-import kotlin.math.abs
 
 class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
 
@@ -23,7 +17,7 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
         val MotorPowerBoomOne = DoubleProperty("Boom One Power", 0.9)
         val MaxEncoderExtensionBoomTwo = DoubleProperty("Boom Two Max Extension", -560000.0)
         val MotorPowerBoomTwo = DoubleProperty("Boom Two Power", 0.9)
-        val PivotPower = DoubleProperty("Pivot Power", 0.45)
+        val PivotPower = DoubleProperty("Pivot Power", 0.55)
         val MaxEncoderExtensionPivot = DoubleProperty("Pivot Max Extension", -190000.0)
         val WristPower = DoubleProperty("Wrist Power", 0.25)
         val MaxEncoderExtensionWrist = DoubleProperty("Max Wrist Extension", -70000.0)
@@ -70,6 +64,8 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
         tab.addString("Arm state") { state.javaClass.simpleName }
         tab.addNumber("Pivot Power",::showPivotPower)
         tab.addBoolean("Low intake finish",::showFinishIntake)
+        tab.addNumber("Pivot Pos", ::showPivotPos)
+        tab.addNumber("Boom two Pos", ::showBoomTwoPos)
     }
 
     override fun periodic() {
@@ -120,10 +116,14 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
     }
 
     fun lowIntake() {
-        changeState(State.Moving)
+        changeState(State.LowIntake)
+        cancelCommand()
         Romance.selectItem.state.let{
             when (it){
                 is SelectItem.State.Cone -> {
+//                    when (state){
+//                        is State.LowIntake -> {LowIntakeCone().schedule()}
+//                    }
                     LowIntakeCone().schedule()
                 }
                 is SelectItem.State.Cube -> {
@@ -133,8 +133,9 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
         }
     }
 
-
-    fun highIntake() {changeState(State.HighIntake)
+    fun highIntake() {
+        changeState(State.HighIntake)
+        cancelCommand()
         Romance.selectItem.state.let{
             when (it){
                 is SelectItem.State.Cone -> {
@@ -146,10 +147,12 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
             }
         }
     }
+
     fun highPost() {
         changeState(State.HighPost)
+        cancelCommand()
         Romance.selectItem.state.let{
-            when (it){
+            when (it) {
                 is SelectItem.State.Cone -> {
                     HighPostCone().schedule()
                 }
@@ -161,6 +164,7 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
     }
     fun midPost() {
         changeState(State.MidPost)
+        cancelCommand()
         Romance.selectItem.state.let{
             when (it){
                 is SelectItem.State.Cone -> {
@@ -174,8 +178,11 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
     }
     fun idle() {changeState(State.Idle)}
     fun stow() {
+        cancelCommand()
+        if (state is State.HighPost || state is State.MidPost || state is State.HighIntake){
+            StowArmSlow().schedule()
+        } else{StowArmFast().schedule()}
         changeState(State.Stow)
-        StowArm().schedule()
 //        Romance.selectItem.state.let{
 //            when (it){
 //                is SelectItem.State.Cone -> {
@@ -186,6 +193,18 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
 //                }
 //            }
 //        }
+    }
+
+    fun fallenIntake() {
+        cancelCommand()
+        changeState(State.LowIntake)
+        FallenIntakeCone().schedule()
+    }
+
+    fun homeArm() {
+        cancelCommand()
+        changeState(State.Idle)
+        HomeCommand().schedule()
     }
 
     private fun idleMotors() {
@@ -233,8 +252,15 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
         return pivotMotor.motorOutputVoltage
     }
 
+    fun showPivotPos(): Double {
+        return pivotMotor.selectedSensorPosition
+    }
+
+    fun showBoomTwoPos(): Double {
+        return boomTwoMotor.selectedSensorPosition
+    }
+
     fun cancelCommand() {
         mCancelCommand = true
-        changeState(State.Idle)
     }
 }

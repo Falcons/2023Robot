@@ -33,6 +33,7 @@ class ExtendBoomOneCommand(private val direction: Int) : CommandBase() {
 
     /** Called once the command ends or is interrupted.  */
     override fun end(interrupted: Boolean) {
+        Romance.arm.mCancelCommand = false
         Romance.arm.boomOneMotor.set(0.0)
         Romance.arm.resetBoomOneLimits()
     }
@@ -41,9 +42,12 @@ class ExtendBoomOneCommand(private val direction: Int) : CommandBase() {
     override fun isFinished(): Boolean {
         if (Romance.arm.mCancelCommand) {return true}
         if (direction == 1) {
-            return (Romance.arm.boomOneMotor.isRevLimitSwitchClosed == 1 ||Math.abs(Romance.arm.boomOneMotor.selectedSensorPosition - Arm.MaxEncoderExtensionBoomOne.value) <= 5000.0)
-        } else {
-            return (Romance.arm.boomOneMotor.isFwdLimitSwitchClosed == 1 || Math.abs(Romance.arm.boomOneMotor.selectedSensorPosition) <= 1000.0)
+            //return (Romance.arm.boomOneMotor.isRevLimitSwitchClosed == 1 || Math.abs(Romance.arm.boomOneMotor.selectedSensorPosition - Arm.MaxEncoderExtensionBoomOne.value) <= 5000.0)
+            return (Romance.arm.boomOneMotor.isRevLimitSwitchClosed == 1 && direction == 1 || Math.abs(Romance.arm.boomOneMotor.selectedSensorPosition - Arm.MaxEncoderExtensionBoomOne.value) <= 5000.0)
+        } else if (direction == -1){
+//            return (Romance.arm.boomOneMotor.isFwdLimitSwitchClosed == 1 || Math.abs(Romance.arm.boomOneMotor.selectedSensorPosition) <= 1000.0)
+            return (Romance.arm.boomOneMotor.isFwdLimitSwitchClosed == 1 && direction == -1 || Math.abs(Romance.arm.boomOneMotor.selectedSensorPosition) <= 1000.0)
         }
+        return false
     }
 }

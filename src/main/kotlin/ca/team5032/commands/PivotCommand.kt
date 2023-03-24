@@ -40,6 +40,7 @@ class PivotCommand(private val position: Double) : CommandBase() {
 
     /** Called once the command ends or is interrupted.  */
     override fun end(interrupted: Boolean) {
+        Romance.arm.mCancelCommand = false
         Romance.arm.resetPivotLimits()
         Romance.arm.pivotMotor.set(0.0)
         // holding power

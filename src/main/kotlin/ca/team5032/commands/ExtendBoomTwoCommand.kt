@@ -40,6 +40,7 @@ class ExtendBoomTwoCommand(private val position: Double) : CommandBase() {
 
     /** Called once the command ends or is interrupted.  */
     override fun end(interrupted: Boolean) {
+        Romance.arm.mCancelCommand = false
         Romance.arm.boomTwoMotor.set(0.0)
         Romance.arm.resetBoomTwoLimits()
     }
@@ -47,6 +48,8 @@ class ExtendBoomTwoCommand(private val position: Double) : CommandBase() {
     /** Returns true when the command should end.  */
     override fun isFinished(): Boolean {
         if (Romance.arm.mCancelCommand) {return true}
+        if (Romance.arm.boomTwoMotor.isFwdLimitSwitchClosed == 1 && direction == -1) {return true}
+        if (Romance.arm.boomTwoMotor.isRevLimitSwitchClosed == 1 && direction == 1) {return true}
         return abs(Romance.arm.boomTwoMotor.selectedSensorPosition - position) <= 800.0
     }
 }

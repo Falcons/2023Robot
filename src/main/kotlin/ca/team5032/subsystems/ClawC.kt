@@ -3,25 +3,25 @@ import ca.team5032.GRAB_MOTOR_ID
 import ca.team5032.INTAKE_MOTOR_ID
 import ca.team5032.OBJECT_SENSOR_ID
 import ca.team5032.Romance
-import ca.team5032.commands.ClawIntakeCommand
+import ca.team5032.commands.ClawPositions.EjectObject
+import ca.team5032.commands.ClawPositions.IntakeCone
+import ca.team5032.commands.ClawPositions.IntakeCube
 import ca.team5032.utils.DoubleProperty
 import ca.team5032.utils.Subsystem
 import ca.team5032.utils.Tabbed
 import com.ctre.phoenix.motorcontrol.NeutralMode
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX
 import edu.wpi.first.wpilibj.DigitalInput
-import edu.wpi.first.wpilibj.XboxController
-import kotlin.math.abs
 
 class ClawC : Subsystem<ClawC.State>("Claw", State.Idle), Tabbed {
 
     companion object {
         // The default power of the intake motor.
-        val IntakeConePower = DoubleProperty("Intake Power", 0.20)
+        val IntakeConePower = DoubleProperty("Intake Power", 0.40)
         val GrabPower = DoubleProperty("Grab Motor Power", 0.60)
-        val IntakeCubePower = DoubleProperty("Intake Cube Power", 0.10)
+        val IntakeCubePower = DoubleProperty("Intake Cube Power", 0.40)
         val OutTakePower = DoubleProperty("Eject Power", -0.1)
-        val MaxCompressEncoderValue = DoubleProperty("Max Compress Encoder Value", -18000.0)
+        val MaxCompressEncoderValue = DoubleProperty("Max Compress Encoder Value", -16600.0)
     }
 
     sealed class State {
@@ -30,15 +30,18 @@ class ClawC : Subsystem<ClawC.State>("Claw", State.Idle), Tabbed {
         object Idle: State()
     }
 
+    var mCancelIntake = false
     val intakeMotor = WPI_TalonFX(INTAKE_MOTOR_ID)
     val grabMotor = WPI_TalonFX(GRAB_MOTOR_ID)
     private val grab = grabMotor.isRevLimitSwitchClosed
-    private val objectSensor = DigitalInput(3)
+    private val objectSensor = DigitalInput(OBJECT_SENSOR_ID)
     private val backUpSense = DigitalInput(1)
     private var power = 0.0
-    var hasObject = false
+
+    //var hasObject = false
 
     init {
+        mCancelIntake = false
         resetGrabLimits()
         intakeMotor.setNeutralMode(NeutralMode.Brake)
         grabMotor.setNeutralMode(NeutralMode.Brake)
@@ -57,22 +60,53 @@ class ClawC : Subsystem<ClawC.State>("Claw", State.Idle), Tabbed {
         state.let {
             when (it) {
                 is State.Intaking -> {
-                    if (Romance.selectItem.state is SelectItem.State.Cone) {}
-                    else {}
+//                    if (Romance.selectItem.state is SelectItem.State.Cone) {}
+//                    else {}
                 }
-                is State.Ejecting -> intakeMotor.set(0.0)
-                is State.Idle -> {
-                    holdObject()
-                    grabMotor.set(0.0)
-                    intakeMotor.set(0.0)
+
+                is State.Ejecting -> {
+                }
+
+                is State.Idle -> {}
+                    //grabMotor.set(-0.2)
+//                {
+//                    if (showSensor() == 1.0) {
+//                        grabMotor.set(-0.15)
+//                    } else {
+//                        grabMotor.set(0.0)
+//                        intakeMotor.set(0.0)
+//                    }
+//                    //holdObject()
+////                    grabMotor.set(0.0)
+////                    intakeMotor.set(0.0)
+//                }
+
+            }
+            if (grabMotor.isFwdLimitSwitchClosed == 1) {
+                grabMotor.selectedSensorPosition = 0.0
+            }
+
+        }
+    }
+
+    fun intake() {
+        changeState(State.Intaking)
+        Romance.selectItem.state.let{
+            when (it){
+                is SelectItem.State.Cone -> {
+                    IntakeCone().schedule()
+                }
+                is SelectItem.State.Cube -> {
+                    IntakeCube().schedule()
                 }
             }
         }
-        if (grabMotor.isFwdLimitSwitchClosed == 1) {grabMotor.selectedSensorPosition = 0.0}
+    }
+    fun eject() {
+        changeState(State.Ejecting)
+        EjectObject().schedule()
     }
 
-    fun intake() {changeState(State.Intaking)}
-    fun eject() {changeState(State.Ejecting)}
     fun stop() {changeState(State.Idle)}
     fun zeroGrab() {
         grabMotor.selectedSensorPosition=0.0
@@ -106,10 +140,23 @@ class ClawC : Subsystem<ClawC.State>("Claw", State.Idle), Tabbed {
 //            grabMotor.setNeutralMode(NeutralMode.Brake)
 //            intakeMotor.setNeutralMode(NeutralMode.Brake)
 //        }
+
+        if (showSensor() == 1.0) {
+            if (Romance.selectItem.state is SelectItem.State.Cone) {
+                grabMotor.set(-0.25)
+                intakeMotor.set(0.0)
+            } else {
+                intakeMotor.set(-0.07)
+                grabMotor.set(0.0)
+            }
+        } else {
+            intakeMotor.set(0.0)
+            grabMotor.set(0.0)
+        }
     }
 
-    private fun showSensor(): Double {
-        if (hasObject) return 1.0
+    fun showSensor(): Double {
+        if (hasObject()) return 1.0
         return 0.0
     }
 
@@ -122,5 +169,9 @@ class ClawC : Subsystem<ClawC.State>("Claw", State.Idle), Tabbed {
         grabMotor.configReverseSoftLimitEnable(true)
         grabMotor.configForwardSoftLimitThreshold(0.0)
         grabMotor.configReverseSoftLimitThreshold(MaxCompressEncoderValue.value)
+    }
+
+    fun cancelIntake() {
+        mCancelIntake = true
     }
 }

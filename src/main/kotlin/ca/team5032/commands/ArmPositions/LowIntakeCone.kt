@@ -4,9 +4,9 @@ import ca.team5032.commands.*
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup
 
 class LowIntakeCone: ParallelCommandGroup(
-    PivotCommand(-170000.0),
+    PivotCommand(-175000.0),
     ExtendBoomOneCommand(-1),
-    ExtendBoomTwoCommand(-410000.0),
+    ExtendBoomTwoCommand(-490000.0),
     WristCommand(-8000.0)
 )
 

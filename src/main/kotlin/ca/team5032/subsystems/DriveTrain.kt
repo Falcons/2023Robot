@@ -15,27 +15,31 @@ import edu.wpi.first.math.kinematics.DifferentialDriveOdometry
 import edu.wpi.first.wpilibj.XboxController
 import edu.wpi.first.wpilibj.drive.DifferentialDrive
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup
+import kotlin.io.path.fileVisitor
 import kotlin.math.abs
 
 class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
     companion object {
         val DEADBAND_THRESHOLD = DoubleProperty("Deadband Threshold", 0.05)
-        val PIVOT_SENSE = DoubleProperty("Rotation sensitivity", 0.4)
+        val PIVOT_SENSE = DoubleProperty("Rotation sensitivity", 0.3)
         val X_SENSE = DoubleProperty("X speed sensitivity",0.7)
-        val Y_SENSE = DoubleProperty("Y Speed Sensitivity", 0.7)
+        val Y_SENSE = DoubleProperty("Y Speed Sensitivity", 0.55)
         val MICRO_SPEED = DoubleProperty("Magnitude of Micro speed", 0.6)
 
     }
 
     // use data inputs in this class to apply to motors
-    data class DriveInput(var xSpeed: Double, var ySpeed: Double, var pivot: Boolean, var brakes: Boolean)
-
+    data class DriveInput(var ySpeed: Double, var xSpeed: Double, var pivot: Boolean, var brakes: Boolean)
+    val autonomousInput = DriveInput(0.0,0.0,true,true)
+    val gyroController = PIDController(0.07, 0.0, 0.0)
     sealed class State {
         object Autonomous : State()
         object Driving : State()
         object Pivot : State()
         object OverrideDrive : State()
         object Idle : State()
+        object SlowPivotLeft : State()
+        object SlowPivotRight : State()
     }
 
     private val leftFront = WPI_TalonFX(LEFT_FRONT_ID)
@@ -46,10 +50,9 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
     private val TofF = TimeOfFlight(TIME_OF_FLIGHT_ID)
     val gyro = PigeonIMU(GYRO_ID)
 
-
     private val m_left = MotorControllerGroup(leftFront, leftRear)
     private val m_right = MotorControllerGroup(rightFront, rightRear)
-    private val m_drive = DifferentialDrive(m_left,m_right)
+    val m_drive = DifferentialDrive(m_left,m_right)
 
 
     private val kMaxSpeed = 3.0
@@ -73,15 +76,32 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
         get() = abs(controller.rightX) > DEADBAND_THRESHOLD.value
 
     private val pivotOverride: Boolean
+        //get() = controller.leftTriggerAxis >= 0.1
         get() = controller.leftBumper
 
     private val brakeOverride: Boolean
+        //get() = controller.rightTriggerAxis >= 0.1
         get() = controller.rightBumper
+    private val pivotLeftSlow: Boolean
+        //get() = controller.leftBumper
+        get() = controller.leftTriggerAxis >= 0.1
+    private val pivotRightSlow: Boolean
+        //get() = controller.rightBumper
+        get() = controller.rightTriggerAxis >= 0.1
 
 
     init {
+        leftFront.configClosedloopRamp(2.0)
+        rightFront.configClosedloopRamp(2.0)
+        leftRear.configClosedloopRamp(2.0)
+        rightRear.configClosedloopRamp(2.0)
         rightFront.inverted = true
         rightRear.inverted = true
+
+        leftFront.setNeutralMode(NeutralMode.Coast)
+        leftRear.setNeutralMode(NeutralMode.Coast)
+        rightFront.setNeutralMode(NeutralMode.Coast)
+        rightRear.setNeutralMode(NeutralMode.Coast)
 
         tab.addNumber("Pitch: ",::getPitch)
         tab.addNumber("Yaw: ",::getYaw)
@@ -89,30 +109,54 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
 
         tab.addNumber("Left Front Motor: ", ::getEncoder)
         tab.addNumber("ToF Distance: ", ::getDistToF)
+
+        tab.addNumber("Velocities: ", ::getVelocity)
+
+        gyroController.setTolerance(2.00)
     }
 
     private fun getInput(): DriveInput{
         return when (state) {
-            is State.Autonomous -> DriveInput(0.0,0.0,pivot = true,brakes = false)
+            is State.Autonomous -> DriveInput(0.0,0.0,pivot = true,brakes = true)
             is State.Driving -> DriveInput(
                 -controller.leftY * Y_SENSE.value,
-                -controller.rightX * X_SENSE.value ,
-                pivot = false,
+                -controller.rightX * PIVOT_SENSE.value,
+                //pivot = false,
+                pivot = true,
                 brakes = false
             )
             is State.Pivot -> DriveInput(
                 0.0,
                 -controller.rightX * PIVOT_SENSE.value,
+                //pivot = true,
                 pivot = true,
                 brakes = false
             )
             is State.OverrideDrive -> DriveInput(
                 -controller.leftY * Y_SENSE.value,
-                -controller.rightX * PIVOT_SENSE.value ,
-                pivot = pivotOverride,
-                brakes = !brakeOverride
+                -controller.rightX * PIVOT_SENSE.value,
+                pivot = true,
+                brakes = brakeOverride
             )
-            else -> DriveInput(0.0, 0.0, pivot = true, brakes = true)
+            is State.SlowPivotLeft -> DriveInput(
+                -controller.leftY * Y_SENSE.value,
+                0.17,
+                pivot = true,
+                brakes = false
+            )
+            is State.SlowPivotRight -> DriveInput(
+                -controller.leftY * Y_SENSE.value,
+                -0.17,
+                pivot = true,
+                brakes = false
+            )
+//            is State.Idle -> DriveInput(
+//                -controller.leftY * Y_SENSE.value,
+//                -controller.rightX * PIVOT_SENSE.value,
+//                pivot = true,
+//                brakes = true
+//            )
+            else -> DriveInput(0.0, 0.0, pivot = true, brakes = false)
         }
     }
     override fun periodic() {
@@ -122,12 +166,18 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
             if (pivotOverride || brakeOverride) {
                 changeState(State.OverrideDrive)
             }
-            else if (hasYInput) {
+            else if (pivotLeftSlow) {
+                changeState(State.SlowPivotLeft)
+            }
+            else if (pivotRightSlow) {
+                changeState(State.SlowPivotRight)
+            }
+            else if (hasYInput || hasXInput) {
                 changeState(State.Driving)
             }
-            else if (hasXInput && !hasYInput) {
-                changeState(State.Pivot)
-            }
+//            else if (hasXInput && !hasYInput) {
+//                changeState(State.Pivot)
+//            }
             else if (state !is State.Idle) {
                 changeState(State.Idle)
             }
@@ -142,19 +192,20 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
 //            brakes = brakeOverride
 //        }
         if (brakes) {
-            leftFront.setNeutralMode(NeutralMode.Brake)
-            leftRear.setNeutralMode(NeutralMode.Brake)
-            rightFront.setNeutralMode(NeutralMode.Brake)
-            rightRear.setNeutralMode(NeutralMode.Brake)
+            applyBrakes()
         } else{
-            leftFront.setNeutralMode(NeutralMode.Coast)
-            leftRear.setNeutralMode(NeutralMode.Coast)
-            rightFront.setNeutralMode(NeutralMode.Coast)
-            rightRear.setNeutralMode(NeutralMode.Coast)
+            disengageBrakes()
         }
 
         m_drive.curvatureDrive(xSpeed,ySpeed,pivot)
 
+    }
+
+    private fun determineCurvatureEngage(): Boolean {
+        if (getVelocity()>15000.0) {
+            return false
+        }
+        return true
     }
 
     fun getPitch(): Double {
@@ -174,7 +225,23 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
         return TofF.pidGet()
     }
 
+    fun getVelocity(): Double {
+        //get the linear velocity
+        return ((abs(leftFront.selectedSensorVelocity) + abs(leftRear.selectedSensorVelocity) + abs(rightFront.selectedSensorVelocity) + abs(rightRear.selectedSensorVelocity))/4)
+    }
 
+    fun applyBrakes() {
+        leftFront.setNeutralMode(NeutralMode.Brake)
+        leftRear.setNeutralMode(NeutralMode.Brake)
+        rightFront.setNeutralMode(NeutralMode.Brake)
+        rightRear.setNeutralMode(NeutralMode.Brake)
+    }
+    fun disengageBrakes() {
+        leftFront.setNeutralMode(NeutralMode.Coast)
+        leftRear.setNeutralMode(NeutralMode.Coast)
+        rightFront.setNeutralMode(NeutralMode.Coast)
+        rightRear.setNeutralMode(NeutralMode.Coast)
+    }
 
 //    public fun resetDriveEncoders() {
 //        leftFront.setSelectedSensorPosition(0.0)
