@@ -47,7 +47,7 @@ class ClawIntakeCommand() : CommandBase() {
                 Romance.clawC.grabMotor.set(-0.2658)
             } else {
                 // compress cone
-                Romance.clawC.grabMotor.set(-0.4)
+                Romance.clawC.grabMotor.set(-0.65)
             }
         }
         Romance.clawC.changeState(ClawC.State.Idle)

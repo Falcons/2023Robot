@@ -19,7 +19,12 @@ const val GYRO_ID = 5
 
 const val INTAKE_MOTOR_ID = 7
 const val GRAB_MOTOR_ID = 8
-const val OBJECT_SENSOR_ID = 3
+const val OBJECT_SENSOR_ID = 4
+
+const val ORANGE_ID = 0
+const val PURPLE_ID = 1
+const val PURPLE_BLINK_ID = 2
+const val ORANGE_BLINK_ID = 3
 
 const val BOOM_ONE_ID = 11
 const val BOOM_TWO_ID = 12

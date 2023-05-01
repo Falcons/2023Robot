@@ -29,5 +29,5 @@ class ConeAndTaxi: SequentialCommandGroup (
 //    InstantCommand({Romance.drive.changeState(DriveTrain.State.Driving)})
     ConeBrainDead(),
     StowArmFast(),
-    DriveForTimeCommand(1.0)
+    DriveForTimeCommand(1.9,0.29,-1)
     )

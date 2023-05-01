@@ -4,6 +4,7 @@ import ca.team5032.INTAKE_MOTOR_ID
 import ca.team5032.OBJECT_SENSOR_ID
 import ca.team5032.Romance
 import ca.team5032.commands.ClawPositions.EjectObject
+import ca.team5032.commands.ClawPositions.FallenIntakeCone
 import ca.team5032.commands.ClawPositions.IntakeCone
 import ca.team5032.commands.ClawPositions.IntakeCube
 import ca.team5032.utils.DoubleProperty
@@ -21,7 +22,7 @@ class ClawC : Subsystem<ClawC.State>("Claw", State.Idle), Tabbed {
         val GrabPower = DoubleProperty("Grab Motor Power", 0.60)
         val IntakeCubePower = DoubleProperty("Intake Cube Power", 0.40)
         val OutTakePower = DoubleProperty("Eject Power", -0.1)
-        val MaxCompressEncoderValue = DoubleProperty("Max Compress Encoder Value", -16600.0)
+        val MaxCompressEncoderValue = DoubleProperty("Max Compress Encoder Value", -16000.0)
     }
 
     sealed class State {
@@ -35,7 +36,7 @@ class ClawC : Subsystem<ClawC.State>("Claw", State.Idle), Tabbed {
     val grabMotor = WPI_TalonFX(GRAB_MOTOR_ID)
     private val grab = grabMotor.isRevLimitSwitchClosed
     private val objectSensor = DigitalInput(OBJECT_SENSOR_ID)
-    private val backUpSense = DigitalInput(1)
+//    private val backUpSense = DigitalInput(1)
     private var power = 0.0
 
     //var hasObject = false
@@ -94,7 +95,11 @@ class ClawC : Subsystem<ClawC.State>("Claw", State.Idle), Tabbed {
         Romance.selectItem.state.let{
             when (it){
                 is SelectItem.State.Cone -> {
-                    IntakeCone().schedule()
+                    if (Romance.arm.state is Arm.State.FallenIntake){
+                        FallenIntakeCone().schedule()
+                    } else {
+                        IntakeCone().schedule()
+                    }
                 }
                 is SelectItem.State.Cube -> {
                     IntakeCube().schedule()
@@ -107,6 +112,10 @@ class ClawC : Subsystem<ClawC.State>("Claw", State.Idle), Tabbed {
         EjectObject().schedule()
     }
 
+    fun outTake(){
+        intakeMotor.set(0.1)
+    }
+
     fun stop() {changeState(State.Idle)}
     fun zeroGrab() {
         grabMotor.selectedSensorPosition=0.0
@@ -115,12 +124,13 @@ class ClawC : Subsystem<ClawC.State>("Claw", State.Idle), Tabbed {
         return grabMotor.selectedSensorPosition
     }
 
+
     private fun getPower(): Double {
         return power
     }
 
     fun hasObject() = objectSensor.get()
-    fun hasBackUp() = backUpSense.get()
+//    fun hasBackUp() = backUpSense.get()
 
     private fun holdObject() {
 //        if (Romance.selectItem.state is SelectItem.State.Cone) {

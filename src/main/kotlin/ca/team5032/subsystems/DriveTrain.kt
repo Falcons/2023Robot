@@ -12,6 +12,8 @@ import com.playingwithfusion.TimeOfFlight
 import edu.wpi.first.math.controller.PIDController
 import edu.wpi.first.math.kinematics.DifferentialDriveKinematics
 import edu.wpi.first.math.kinematics.DifferentialDriveOdometry
+import edu.wpi.first.networktables.GenericEntry
+import edu.wpi.first.networktables.NetworkTableEntry
 import edu.wpi.first.wpilibj.XboxController
 import edu.wpi.first.wpilibj.drive.DifferentialDrive
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup
@@ -23,7 +25,7 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
         val DEADBAND_THRESHOLD = DoubleProperty("Deadband Threshold", 0.05)
         val PIVOT_SENSE = DoubleProperty("Rotation sensitivity", 0.3)
         val X_SENSE = DoubleProperty("X speed sensitivity",0.7)
-        val Y_SENSE = DoubleProperty("Y Speed Sensitivity", 0.55)
+        val Y_SENSE = DoubleProperty("Y Speed Sensitivity", 0.70)
         val MICRO_SPEED = DoubleProperty("Magnitude of Micro speed", 0.6)
 
     }
@@ -42,10 +44,10 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
         object SlowPivotRight : State()
     }
 
-    private val leftFront = WPI_TalonFX(LEFT_FRONT_ID)
-    private val leftRear = WPI_TalonFX(LEFT_REAR_ID)
-    private val rightFront = WPI_TalonFX(RIGHT_FRONT_ID)
-    private val rightRear = WPI_TalonFX(RIGHT_REAR_ID)
+    val leftFront = WPI_TalonFX(LEFT_FRONT_ID)
+    val leftRear = WPI_TalonFX(LEFT_REAR_ID)
+    val rightFront = WPI_TalonFX(RIGHT_FRONT_ID)
+    val rightRear = WPI_TalonFX(RIGHT_REAR_ID)
 
     private val TofF = TimeOfFlight(TIME_OF_FLIGHT_ID)
     val gyro = PigeonIMU(GYRO_ID)
@@ -79,7 +81,7 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
         //get() = controller.leftTriggerAxis >= 0.1
         get() = controller.leftBumper
 
-    private val brakeOverride: Boolean
+    private var brakeOverride: Boolean = true
         //get() = controller.rightTriggerAxis >= 0.1
         get() = controller.rightBumper
     private val pivotLeftSlow: Boolean
@@ -98,10 +100,10 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
         rightFront.inverted = true
         rightRear.inverted = true
 
-        leftFront.setNeutralMode(NeutralMode.Coast)
-        leftRear.setNeutralMode(NeutralMode.Coast)
-        rightFront.setNeutralMode(NeutralMode.Coast)
-        rightRear.setNeutralMode(NeutralMode.Coast)
+//        leftFront.setNeutralMode(NeutralMode.Coast)
+//        leftRear.setNeutralMode(NeutralMode.Coast)
+//        rightFront.setNeutralMode(NeutralMode.Coast)
+//        rightRear.setNeutralMode(NeutralMode.Coast)
 
         tab.addNumber("Pitch: ",::getPitch)
         tab.addNumber("Yaw: ",::getYaw)
@@ -112,12 +114,19 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
 
         tab.addNumber("Velocities: ", ::getVelocity)
 
+
+//        val criticalAngle = tab.add("Critical Angle", 16.0)
+//            .getEntry()
+//
+//        val tippingAngle = tab.add("Critical Angle", 14.0)
+//            .getEntry()
+
         gyroController.setTolerance(2.00)
     }
 
     private fun getInput(): DriveInput{
         return when (state) {
-            is State.Autonomous -> DriveInput(0.0,0.0,pivot = true,brakes = true)
+            is State.Autonomous -> autonomousInput
             is State.Driving -> DriveInput(
                 -controller.leftY * Y_SENSE.value,
                 -controller.rightX * PIVOT_SENSE.value,
@@ -183,6 +192,25 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
             }
         }
 
+//        if (pivotOverride || brakeOverride) {
+//            changeState(State.OverrideDrive)
+//        }
+//        else if (pivotLeftSlow) {
+//            changeState(State.SlowPivotLeft)
+//        }
+//        else if (pivotRightSlow) {
+//            changeState(State.SlowPivotRight)
+//        }
+//        else if (hasYInput || hasXInput) {
+//            changeState(State.Driving)
+//        }
+////            else if (hasXInput && !hasYInput) {
+////                changeState(State.Pivot)
+////            }
+//        else if (state !is State.Idle) {
+//            changeState(State.Idle)
+//        }
+
         var (xSpeed, ySpeed, pivot, brakes) = getInput()
 
 //        if (pivotOverride || brakeOverride) {
@@ -193,12 +221,11 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
 //        }
         if (brakes) {
             applyBrakes()
-        } else{
+        } else {
             disengageBrakes()
         }
 
         m_drive.curvatureDrive(xSpeed,ySpeed,pivot)
-
     }
 
     private fun determineCurvatureEngage(): Boolean {
@@ -235,6 +262,10 @@ class DriveTrain : Subsystem<DriveTrain.State>("Drive", State.Idle), Tabbed {
         leftRear.setNeutralMode(NeutralMode.Brake)
         rightFront.setNeutralMode(NeutralMode.Brake)
         rightRear.setNeutralMode(NeutralMode.Brake)
+    }
+
+    fun engageBrake(){
+        brakeOverride = true
     }
     fun disengageBrakes() {
         leftFront.setNeutralMode(NeutralMode.Coast)

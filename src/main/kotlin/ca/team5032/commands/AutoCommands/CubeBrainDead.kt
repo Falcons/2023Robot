@@ -4,6 +4,7 @@ import ca.team5032.Romance
 import ca.team5032.commands.*
 import ca.team5032.commands.ArmPositions.HighPostCone
 import ca.team5032.commands.ArmPositions.HighPostCube
+import ca.team5032.commands.ArmPositions.StowArmSlow
 import ca.team5032.commands.ClawPositions.EjectObject
 import ca.team5032.subsystems.SelectItem
 import edu.wpi.first.wpilibj2.command.*
@@ -11,6 +12,7 @@ import edu.wpi.first.wpilibj2.command.*
 class CubeBrainDead: SequentialCommandGroup (
     InstantCommand({Romance.selectItem.changeState(SelectItem.State.Cube)}),
     ClawIntakeCommand(),
+//    HighPostCube(),
     ParallelRaceGroup(
 //        ParallelCommandGroup(
 //            PivotCommand(-4300.0),
@@ -19,13 +21,13 @@ class CubeBrainDead: SequentialCommandGroup (
 //            WristCommand(-22000.0)
 //        ),
         HighPostCube(),
-        WaitCommand(4.0)
+        WaitCommand(3.5)
     ),
     //DriveUntilNotBalanced(-1)
     //HighPostCube(),
     EjectObject(),
 //    StowArmSlow()
-    HomeCommand()
+    StowArmSlow()
     //DriveForTimeCommand()
 //    ParallelRaceGroup(
 //        WaitCommand(1.0),

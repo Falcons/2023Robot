@@ -4,7 +4,6 @@ package ca.team5032
 import ca.team5032.commands.*
 import ca.team5032.commands.AutoCommands.*
 import ca.team5032.subsystems.*
-import edu.wpi.first.net.PortForwarder
 import edu.wpi.first.wpilibj.TimedRobot
 import edu.wpi.first.wpilibj.XboxController
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser
@@ -13,7 +12,6 @@ import edu.wpi.first.wpilibj2.command.Command
 import edu.wpi.first.wpilibj2.command.CommandScheduler
 import edu.wpi.first.wpilibj2.command.button.JoystickButton
 import edu.wpi.first.wpilibj2.command.button.POVButton
-import javax.sound.sampled.Port
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -133,10 +131,16 @@ object Romance : TimedRobot() {
 //            .whenPressed({DriveForTimeCommand(1.0).schedule()}, drive).whenReleased({DriveForTimeCommand(1.0).cancel()}, drive)
 
 //        JoystickButton(driveController, XboxController.Button.kA.value)
-//            .whenPressed({DriveForTimeCommand().schedule()}, drive)
-
+//            .whenPressed(BalanceStages.schedule(), drive)
+//
 //        JoystickButton(driveController,XboxController.Button.kA.value)
 //            .whenPressed({BalanceStages(-1).schedule()}, drive)
+//
+//        JoystickButton(driveController,XboxController.Button.kY.value)
+//            .whenPressed({BalanceStages(1).schedule()}, drive)
+
+        JoystickButton(peripheralController,XboxController.Button.kRightStick.value)
+            .whenPressed(arm::highIntake, arm)
     }
 
     override fun robotInit() {
@@ -159,7 +163,12 @@ object Romance : TimedRobot() {
         autoChooser.addOption("Place Cube", CubeBrainDead())
         autoChooser.addOption("Place cone and taxi", ConeAndTaxi())
         autoChooser.addOption("Place cube and taxi", CubeAndTaxi())
+        autoChooser.addOption("Place cube and balance", CubeAndBalance())
+        autoChooser.addOption("Place cone and balance", ConeAndBalance())
         autoChooser.addOption("Taxi", Taxi())
+        autoChooser.addOption("Test Auto Brake", TestAuto())
+        autoChooser.addOption("Test Balance", BalanceCommand(-1))
+        autoChooser.addOption("Cube over and balance", CubeOverAndBalance())
 
         SmartDashboard.putData(autoChooser)
 
@@ -186,7 +195,8 @@ object Romance : TimedRobot() {
 
     /** This function is called periodically when disabled.  */
     override fun disabledPeriodic() {
-        drive.applyBrakes()
+//        drive.applyBrakes()
+        drive.disengageBrakes()
     }
 
     /** This autonomous runs the autonomous command selected by your [RobotContainer] class.  */
@@ -196,15 +206,19 @@ object Romance : TimedRobot() {
         // Schedule the autonomous command (example)
         // Note the Kotlin safe-call(?.), this ensures autonomousCommand is not null before scheduling it
         //autonomousCommand?.schedule()
+        drive.engageBrake()
         autoCommand = autoChooser.selected
         autoCommand.schedule()
     }
 
     /** This function is called periodically during autonomous.  */
-    override fun autonomousPeriodic() {}
+    override fun autonomousPeriodic() {
+        drive.engageBrake()
+    }
 
     /** This function is called once when teleop is enabled.  */
     override fun teleopInit() {
+        drive.changeState(DriveTrain.State.Driving)
         drive.disengageBrakes()
         // This makes sure that the autonomous stops running when
         // teleop starts running. If you want the autonomous to

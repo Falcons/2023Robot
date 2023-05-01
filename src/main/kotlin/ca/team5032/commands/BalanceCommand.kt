@@ -2,137 +2,96 @@ package ca.team5032.commands
 
 import ca.team5032.Romance
 import ca.team5032.Romance.drive
-import ca.team5032.Romance.limelight
 import ca.team5032.subsystems.DriveTrain
-import ca.team5032.subsystems.Limelight
-import com.ctre.phoenix.motorcontrol.NeutralMode
 import edu.wpi.first.wpilibj2.command.CommandBase
 import kotlin.math.abs
-import kotlin.math.sign
 
-class BalanceCommand() : CommandBase() {
+class BalanceCommand(var direction: Int) : CommandBase() {
 
     private var ticksAtSetpoint = 0
-    private var ticksAtCritical = 0
+    private var ticksAtCritical = 0.0
     private var MINIMUM_Y_SPEED = 0.2
     private var xSpeed = 0.0
-    private var criticalAngle = 0.0
+    //private var criticalAngle = 16.0
+    private var criticalAngle = 18.0
+    private var tippingAngle = 0.0
+    private var slowStageEnables = false
 
-    // Must be at the setpoint for 0.6 seconds.
-    private var tickThreshold = 0.2 / Romance.period
+    private val time = 0.6
+    private var tickThreshold = time / Romance.period
 
-    //private val setpoint = if (targetPipeline == Limelight.Pipeline.ReflectiveTape) 0.0 else 1.0
+    private var previous = 0.0
+    private var current = 0.0
 
     override fun initialize() {
         Romance.arm.mCancelCommand = false
-        drive.applyBrakes()
+        drive.changeState(DriveTrain.State.Autonomous)
+        drive.engageBrake()
+        if (direction == -1){
+            criticalAngle = drive.gyro.roll+16.4
+
+        } else {
+            criticalAngle = drive.gyro.roll+10.5
+        }
+        tippingAngle = criticalAngle-0.7
+        drive.autonomousInput.ySpeed = 0.0
         ticksAtSetpoint = 0
+        current = drive.gyro.roll
     }
 
     override fun execute() {
         // Turn towards target.
         // get error
         val angleOffset = drive.gyro.roll
-        drive.applyBrakes()
+        previous = current
+        current = angleOffset
+        //drive.applyBrakes()
 
-        // check if angle is greater than critical
-        if (abs(angleOffset) >= criticalAngle) {
-            criticalAngle = abs(angleOffset)
-        }
+        // keep updating tipping angle
+//        if (abs(angleOffset)>tippingAngle) {
+//            tippingAngle = abs(angleOffset)
+//        }
 
-        // moment when robot stops climbing
+        // keep driving until it has reached the critical angle
         if (abs(angleOffset) < criticalAngle) {
-            ticksAtCritical ++
-        } else {
-            ticksAtCritical = 0
+            xSpeed = 0.26*direction
         }
 
-//        val output = drive.gyroController.calculate(angleOffset, 0.0)
-//        val absolute = Math.abs(output)
-//        val sign = -sign(output)
-//
-//        val remapped = absolute * (1 - MINIMUM_Y_SPEED) + MINIMUM_Y_SPEED
-//
-//        if (remapped > MINIMUM_Y_SPEED) {
-//            xSpeed = MINIMUM_Y_SPEED
-//        } else {
-//            xSpeed = sign * remapped
-//        }
-//
-//        if (drive.gyroController.atSetpoint()) {
-//            ticksAtSetpoint++
-//        } else {
-//            ticksAtSetpoint = 0
+        if (abs(angleOffset) > criticalAngle && abs(previous-current) <=0.7) {
+            ticksAtCritical++
+        }
+
+        // once the angle offset hits the critical angle threshold start driving slow until it tips
+//        if (abs(angleOffset) in criticalAngle..tippingAngle) {
+//            ticksAtCritical++
 //        }
 
-        if (ticksAtCritical < tickThreshold) {
-//            if (angleOffset <= -2.5) {
-//                // drive until not balanced
-////                drive.m_drive.curvatureDrive(-0.25, 0.0, true)
-//                xSpeed = -0.25
-//            } else if (angleOffset >= 2.5) {
-////                drive.m_drive.curvatureDrive(0.25, 0.0, true)
-//                xSpeed = 0.25
-//            }
-
-            xSpeed = -0.23
-
-            // check for critical
-//            if (16.0 <= abs(angleOffset)){
-//                ticksAtCritical ++
-//            } else {
-//                ticksAtCritical = 0
-//            }
-
-        } else if (ticksAtCritical >= tickThreshold && ticksAtSetpoint < tickThreshold){
-            // slow balance
-            if (angleOffset <= -2.0) {
-//                drive.m_drive.curvatureDrive(-0.17, 0.0, true)
-                xSpeed = -0.10
-            } else if (angleOffset >= 2.0) {
-//                drive.m_drive.curvatureDrive(0.17, 0.0, true)
-                xSpeed = 0.10
+        if (ticksAtCritical >= tickThreshold) {
+            slowStageEnables = true
+            xSpeed = if (direction == -1){
+                -0.15
+            } else{
+                0.13
             }
-
-            //xSpeed = -0.10
-
-            // check for balance
-//            if (1.8 >= abs(angleOffset) && ticksAtCritical >= tickThreshold){
-//                ticksAtSetpoint ++
-//            } else {
-//                ticksAtSetpoint = 0
-//            }
-
-        } else {
-//            drive.m_drive.curvatureDrive(0.0,0.0,true)
-            xSpeed = 0.0
+            //xSpeed = 0.18*direction
+            if (angleOffset in -tippingAngle..tippingAngle) {
+                xSpeed = 0.0
+                ticksAtSetpoint++
+            }
         }
-
-        // check to see if it is at critical angle
-//        if (15.4 <= abs(angleOffset)){
-//            ticksAtCritical ++
-//        } else if (ticksAtCritical <= tickThreshold) {
-//            ticksAtCritical = 0
-//        }
-
-        if (1.2 >= abs(angleOffset) && ticksAtCritical >= tickThreshold){
-            ticksAtSetpoint ++
-        } else {
-            ticksAtSetpoint = 0
-        }
-        drive.m_drive.curvatureDrive(xSpeed, 0.0, true)
+        drive.autonomousInput.ySpeed = xSpeed
+//        drive.m_drive.curvatureDrive(xSpeed, 0.0, true)
     }
 
     override fun end(interrupted: Boolean) {
-       xSpeed = 0.0
+        xSpeed = 0.0
+        drive.autonomousInput.ySpeed = 0.0
         Romance.arm.mCancelCommand = false
-       drive.m_drive.curvatureDrive(0.0,0.0,true)
-        drive.changeState(DriveTrain.State.Idle)
-        drive.applyBrakes()
+        drive.engageBrake()
     }
 
     override fun isFinished(): Boolean {
-        return ticksAtSetpoint >= tickThreshold
         if (Romance.arm.mCancelCommand) {return true}
+        return ticksAtSetpoint >= tickThreshold
     }
 }

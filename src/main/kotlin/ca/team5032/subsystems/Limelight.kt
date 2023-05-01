@@ -89,7 +89,7 @@ class Limelight : Subsystem<Limelight.State>("Limelight", State.Idle), Tabbed {
         tab.addString("State") { state.javaClass.simpleName }
         tab.addNumber("tx", ::returnTx)
         controller.setTolerance(2.00)
-        changeState(State.Targeting(Pipeline.ReflectiveTape))
+        changeState(State.Targeting(Pipeline.Apriltag))
         cameraMode = CameraMode.Processing
         ledMode = LEDMode.On
 

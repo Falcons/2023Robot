@@ -29,5 +29,5 @@ class CubeAndTaxi: SequentialCommandGroup (
 //    InstantCommand({Romance.drive.changeState(DriveTrain.State.Driving)})
     CubeBrainDead(),
     StowArmFast(),
-    DriveForTimeCommand(1.0)
+    DriveForTimeCommand(1.5, 0.25, -1)
     )

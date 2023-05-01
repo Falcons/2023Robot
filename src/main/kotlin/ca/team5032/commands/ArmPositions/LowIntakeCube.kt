@@ -4,9 +4,9 @@ import ca.team5032.commands.*
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup
 
 class LowIntakeCube: ParallelCommandGroup(
-    PivotCommand(-170000.0),
+    PivotCommand(-230000.0),
     ExtendBoomOneCommand(-1),
-    ExtendBoomTwoCommand(-470000.0),
-    WristCommand(-8000.0)
+    ExtendBoomTwoCommand(-320000.0),
+    WristCommand(-19000.0)
 )
 

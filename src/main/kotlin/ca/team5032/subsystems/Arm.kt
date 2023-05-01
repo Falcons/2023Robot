@@ -2,25 +2,28 @@ package ca.team5032.subsystems
 import ca.team5032.*
 import ca.team5032.commands.ArmPositions.*
 import ca.team5032.commands.HomeCommand
+import ca.team5032.commands.StowHomeCommand
 import ca.team5032.utils.DoubleProperty
 import ca.team5032.utils.Subsystem
 import ca.team5032.utils.Tabbed
 import com.ctre.phoenix.motorcontrol.NeutralMode
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX
 import edu.wpi.first.wpilibj.XboxController
+import kotlin.math.abs
 
 class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
 
     companion object {
         // The default power of the intake motor.
-        val MaxEncoderExtensionBoomOne = DoubleProperty("Boom One Max Extension", -680000.0)
-        val MotorPowerBoomOne = DoubleProperty("Boom One Power", 0.9)
-        val MaxEncoderExtensionBoomTwo = DoubleProperty("Boom Two Max Extension", -560000.0)
-        val MotorPowerBoomTwo = DoubleProperty("Boom Two Power", 0.9)
-        val PivotPower = DoubleProperty("Pivot Power", 0.55)
-        val MaxEncoderExtensionPivot = DoubleProperty("Pivot Max Extension", -190000.0)
+        val MaxEncoderExtensionBoomOne = DoubleProperty("Boom One Max Extension", -535000.0)
+        val MotorPowerBoomOne = DoubleProperty("Boom One Power", 0.99)
+        val MaxEncoderExtensionBoomTwo = DoubleProperty("Boom Two Max Extension", -437300.0)
+        val MotorPowerBoomTwo = DoubleProperty("Boom Two Power", 0.99)
+        val PivotPower = DoubleProperty("Pivot Power", 0.65)
+        val MaxEncoderExtensionPivot = DoubleProperty("Pivot Max Extension", -242000.0)
         val WristPower = DoubleProperty("Wrist Power", 0.25)
         val MaxEncoderExtensionWrist = DoubleProperty("Max Wrist Extension", -70000.0)
+        val DEADBAND_VALUE = 0.20
     }
 
     sealed class State {
@@ -29,6 +32,7 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
         object HighPost : State()
         object MidPost : State()
         object Idle: State()
+        object FallenIntake: State()
         object Stow: State()
         object Moving : State()
     }
@@ -58,6 +62,12 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
         boomOneMotor.setNeutralMode(NeutralMode.Brake)
         boomTwoMotor.setNeutralMode(NeutralMode.Brake)
         wristMotor.setNeutralMode(NeutralMode.Brake)
+
+//        pivotMotor.setNeutralMode(NeutralMode.Coast)
+//        boomOneMotor.setNeutralMode(NeutralMode.Coast)
+//        boomTwoMotor.setNeutralMode(NeutralMode.Coast)
+//        wristMotor.setNeutralMode(NeutralMode.Coast)
+
         boomOneMotor.selectedSensorPosition = 0.0
         boomTwoMotor.selectedSensorPosition = 0.0
 //        tab.add("State",state)
@@ -66,9 +76,39 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
         tab.addBoolean("Low intake finish",::showFinishIntake)
         tab.addNumber("Pivot Pos", ::showPivotPos)
         tab.addNumber("Boom two Pos", ::showBoomTwoPos)
+        tab.addNumber("Boom one Pos", ::showBoomOnePos)
+        tab.addNumber("Wrist Pos", ::showWristPos)
     }
 
+    private val hasLeftYInput: Boolean
+        get() = abs(controller.leftY) > DEADBAND_VALUE
+
+    private val hasRightYInput: Boolean
+        get() = abs(controller.rightY) > DEADBAND_VALUE
+
+    private val hasRightTrigger: Boolean
+        get() = abs(controller.rightTriggerAxis) > DEADBAND_VALUE
+
+    private val hasLeftTrigger: Boolean
+        get() = abs(controller.leftTriggerAxis) > DEADBAND_VALUE
+
     override fun periodic() {
+        if (hasLeftYInput){
+            cancelCommand()
+            wristMotor.set(controller.leftY*0.25)
+        }
+        if (hasRightYInput){
+            cancelCommand()
+            pivotMotor.set(controller.rightY*0.35)
+        }
+        if (hasLeftTrigger){
+            cancelCommand()
+            boomTwoMotor.set(controller.leftTriggerAxis*0.75)
+        }
+        if (hasRightTrigger){
+            cancelCommand()
+            boomTwoMotor.set(-controller.rightTriggerAxis*0.75)
+        }
         // cone commands
         //CANCEL PREVIOUS COMMAND BEFORE RUNNING
         if (Romance.selectItem.state is SelectItem.State.Cone) {
@@ -80,6 +120,7 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
                     is State.HighPost -> idleMotors()
                     is State.MidPost -> idleMotors()
                     is State.Stow -> idleMotors()
+                    is State.FallenIntake -> idleMotors()
                     is State.Idle -> {
 //                        LowIntakeCone().cancel()
 //                        MidPostCone().cancel()
@@ -102,6 +143,7 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
                     is State.HighPost -> idleMotors()
                     is State.MidPost -> idleMotors()
                     is State.Stow -> idleMotors()
+                    is State.FallenIntake -> idleMotors()
                     is State.Idle -> {
                         idleMotors()
                     }
@@ -139,10 +181,10 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
         Romance.selectItem.state.let{
             when (it){
                 is SelectItem.State.Cone -> {
-                    HighPostCone().schedule()
+                    HighIntakeCone().schedule()
                 }
                 is SelectItem.State.Cube -> {
-                    HighPostCube().schedule()
+                    HighIntakeCube().schedule()
                 }
             }
         }
@@ -197,7 +239,7 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
 
     fun fallenIntake() {
         cancelCommand()
-        changeState(State.LowIntake)
+        changeState(State.FallenIntake)
         FallenIntakeCone().schedule()
     }
 
@@ -205,6 +247,11 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
         cancelCommand()
         changeState(State.Idle)
         HomeCommand().schedule()
+    }
+
+    fun stowHome() {
+        changeState(State.Stow)
+        StowHomeCommand().schedule()
     }
 
     private fun idleMotors() {
@@ -260,7 +307,21 @@ class Arm : Subsystem<Arm.State>("Arm", State.Idle), Tabbed {
         return boomTwoMotor.selectedSensorPosition
     }
 
+    fun showBoomOnePos(): Double {
+        return boomOneMotor.selectedSensorPosition
+    }
+
+    fun showWristPos(): Double {
+        return wristMotor.selectedSensorPosition
+    }
+
     fun cancelCommand() {
+        wristMotor.set(0.0)
+        pivotMotor.set(0.0)
+        boomTwoMotor.set(0.0)
+        boomOneMotor.set(0.0)
+        //Romance.clawC.grabMotor.set(0.0)
+        Romance.clawC.intakeMotor.set(0.0)
         mCancelCommand = true
     }
 }

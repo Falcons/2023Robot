@@ -18,7 +18,7 @@ class ConeBrainDead: SequentialCommandGroup (
 //            WristCommand(-22000.0)
 //        ),
         HighPostCone(),
-        WaitCommand(4.0)
+        WaitCommand(3.0)
     ),
     //DriveUntilNotBalanced(-1)
     //HighPostCube(),
